@@ -17,15 +17,45 @@ namespace Magic_Villa_WebAPI.Controllers
         }
 
 
-        [HttpGet("id")]
-        public VillaDto GetVillaById(int id)
+        [HttpGet("{id:int}",Name = "GetVilla")] //we can pass route name too
+        [ProducesResponseType(StatusCodes.Status200OK)] //documenting the response type
+        [ProducesResponseType(400)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<VillaDto> GetVillaById(int id)
         {
-            var villa = VillaDataClass.villasList.FirstOrDefault(x => x.Id == id);
-            if(villa == null)
+            if(id == 0 || id == null)
             {
-                return null;
+                return BadRequest("please enter valid ID");
             }
-            return villa;
+            else
+            {
+                var villa = VillaDataClass.villasList.FirstOrDefault(x => x.Id == id);
+                if (villa == null)
+                {
+                    return NotFound("Data not Found");
+                }
+                return villa;
+            }
+        }
+
+        [HttpPost]
+
+        public ActionResult<VillaDto> CreateVilla([FromBody] VillaDto villa) 
+        {
+            if (villa == null) { 
+                return BadRequest();
+            }
+
+            if(villa.Id > 0)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            villa.Id = VillaDataClass.villasList.OrderByDescending(x => x.Id).FirstOrDefault().Id + 1;
+
+            VillaDataClass.villasList.Add(villa);
+
+            return CreatedAtRoute("GetVilla",new {id = villa.Id},villa); // Name,param,whole object
         }
 
     }
