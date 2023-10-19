@@ -1,8 +1,18 @@
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 
-builder.Services.AddControllers();
+/*Log.Logger = new LoggerConfiguration().MinimumLevel.Information()
+    .WriteTo.File("log/villalogs.txt",rollingInterval:RollingInterval.Day)
+    .CreateLogger();
+builder.Host.UseSerilog(); */
+
+
+// Add services to the container.   
+builder.Services.AddControllers(option => {
+   // option.ReturnHttpNotAcceptable = true; 
+}).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters(); //accpet xml and json data too based on request accept type header
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
