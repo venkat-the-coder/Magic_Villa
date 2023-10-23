@@ -1,3 +1,5 @@
+using Magic_Villa_WebAPI.DB_Context;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,7 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog(); */
 
 
-// Add services to the container.   
+// Add services to the container.
+builder.Services.AddDbContext<VillaDBContext>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSqlConnection")));
 builder.Services.AddControllers(option => {
    // option.ReturnHttpNotAcceptable = true; 
 }).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters(); //accpet xml and json data too based on request accept type header
