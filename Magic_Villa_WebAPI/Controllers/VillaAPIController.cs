@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.JsonPatch;
 using Magic_Villa_WebAPI.DB_Context;
 using Magic_Villa_WebAPI.Domain.Models;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace Magic_Villa_WebAPI.Controllers
 {
@@ -15,18 +16,21 @@ namespace Magic_Villa_WebAPI.Controllers
     {
         private readonly ILogger<VillaAPIController> _logger;
         private readonly VillaDBContext _context;
+        private readonly IMapper _mapper;
 
-        public VillaAPIController(ILogger<VillaAPIController> logger, VillaDBContext context)
+        public VillaAPIController(ILogger<VillaAPIController> logger, VillaDBContext context, IMapper mapper)
         {
             _logger = logger;
             _context = context;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public ActionResult <IEnumerable<VillaDto>> GetAllVillas()
+        public async Task<ActionResult<IEnumerable<VillaDto>>> GetAllVillas()
         {
             _logger.LogInformation("Getting All Villas....");
-            return Ok(_context.Villas);
+            IEnumerable<VillaModelClass> villas = await _context.Villas.ToListAsync();
+            return Ok(_mapper.Map<VillaDto>(villas));
         }
 
 
@@ -34,7 +38,7 @@ namespace Magic_Villa_WebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)] //documenting the response type
         [ProducesResponseType(400)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<VillaDto> GetVillaById(int id)
+        public async Task<ActionResult<VillaDto>> GetVillaById(int id)
         {
             if (id == 0 || id == null)
             {
@@ -44,12 +48,12 @@ namespace Magic_Villa_WebAPI.Controllers
             }
             else
             {
-                var villa = _context.Villas.FirstOrDefault(x => x.Id == id);
+                VillaModelClass villa = await _context.Villas.FirstOrDefaultAsync(x => x.Id == id);
                 if (villa == null)
                 {
                     return NotFound("Data not Found");
                 }
-                return Ok(villa);
+                return Ok(_mapper.Map<VillaDto>(villa));
             }
         }
 
@@ -57,7 +61,7 @@ namespace Magic_Villa_WebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
 
-        public ActionResult<VillaDto> CreateVilla([FromBody] VillaDto villa)
+        public async Task<ActionResult<VillaDto>> CreateVilla([FromBody] VillaCreateDto villa)
         {
             //default model validation will be checked 
             if (!ModelState.IsValid)
@@ -66,7 +70,7 @@ namespace Magic_Villa_WebAPI.Controllers
             }
 
             //Custom Validation
-            if (_context.Villas.FirstOrDefault(x => x.Name.ToLower() == villa.Name.ToLower()) != null)
+            if (await _context.Villas.FirstOrDefaultAsync(x => x.Name.ToLower() == villa.Name.ToLower()) != null)
             {
                 ModelState.AddModelError("", "Villa Name should be unique");
                 return BadRequest(ModelState);
@@ -76,25 +80,22 @@ namespace Magic_Villa_WebAPI.Controllers
                 return BadRequest();
             }
 
-            if (villa.Id > 0)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError);
-            }
+            VillaModelClass newVilla =  _mapper.Map<VillaModelClass>(villa);
 
-            VillaModelClass newVilla = new VillaModelClass()
-            {
-                Name = villa.Name,
-                Details = villa.Details,
-                Amenity = villa.Amenity,
-                ImageURL = villa.ImageURL,
-                Occupancy = villa.Occupancy,
-                Rate = villa.Rate,
-                Sqft = villa.Sqft,
-            };
+            //VillaModelClass newVilla = new VillaModelClass()
+            //{
+            //    Name = villa.Name,
+            //    Details = villa.Details,
+            //    Amenity = villa.Amenity,
+            //    ImageURL = villa.ImageURL,
+            //    Occupancy = villa.Occupancy,
+            //    Rate = villa.Rate,
+            //    Sqft = villa.Sqft,
+            //};
             _context.Villas.Add(newVilla);
             _context.SaveChanges();
 
-            return CreatedAtRoute("GetVilla", new { id = villa.Id }, villa); // Name,param,whole object
+            return CreatedAtRoute("GetVilla", new { id = newVilla.Id }, villa); // Name,param,whole object
         }
 
         [HttpDelete("{id:int}")]
@@ -122,7 +123,7 @@ namespace Magic_Villa_WebAPI.Controllers
 
         [HttpPut("{id:int}")]
 
-        public IActionResult UpdateVilla(int id, [FromBody] VillaDto villa) //IactionResult used to return no content
+        public IActionResult UpdateVilla(int id, [FromBody] VillaUpdateDto villa) //IactionResult used to return no content
         {
             if (id == null || id != villa.Id)
             {
@@ -135,17 +136,19 @@ namespace Magic_Villa_WebAPI.Controllers
             {
                 return NotFound();
             }
+            VillaModelClass newVilla = _mapper.Map<VillaModelClass>(villa);
 
-            VillaModelClass newVilla = new VillaModelClass()
-            {
-                Name = villa.Name,
-                Details = villa.Details,
-                Amenity = villa.Amenity,
-                ImageURL = villa.ImageURL,
-                Occupancy = villa.Occupancy,
-                Rate = villa.Rate,
-                Sqft = villa.Sqft,
-            };
+            //VillaModelClass newVilla = new VillaModelClass()
+            //{
+            //    Name = villa.Name,
+            //    Details = villa.Details,
+            //    Amenity = villa.Amenity,
+            //    ImageURL = villa.ImageURL,
+            //    Occupancy = villa.Occupancy,
+            //    Rate = villa.Rate,
+            //    Sqft = villa.Sqft,
+            //};
+
             _context.Villas.Update(newVilla);
             _context.SaveChanges();
 
@@ -155,7 +158,7 @@ namespace Magic_Villa_WebAPI.Controllers
 
         [HttpPatch("{id:int}")]
 
-        public IActionResult PartialUpdateVilla(int id , JsonPatchDocument<VillaDto> patchVilla)
+        public IActionResult PartialUpdateVilla(int id , JsonPatchDocument<VillaUpdateDto> patchVilla)
         {
             if (id == null || patchVilla == null)
             {
@@ -170,29 +173,12 @@ namespace Magic_Villa_WebAPI.Controllers
             {
                 return BadRequest();    
             }
-            VillaDto newVillaDto = new VillaDto()
-            {
-                Name = villaFound.Name,
-                Details = villaFound.Details,
-                Amenity = villaFound.Amenity,
-                ImageURL = villaFound.ImageURL,
-                Occupancy = villaFound.Occupancy,
-                Rate = villaFound.Rate,
-                Sqft = villaFound.Sqft,
-            };
+
+            VillaUpdateDto newVillaDto = _mapper.Map<VillaUpdateDto>(villaFound);
 
             patchVilla.ApplyTo(newVillaDto, ModelState);
 
-            VillaModelClass newVilla = new VillaModelClass()
-            {
-                Name = newVillaDto.Name,
-                Details = newVillaDto.Details,
-                Amenity = newVillaDto.Amenity,
-                ImageURL = newVillaDto.ImageURL,
-                Occupancy = newVillaDto.Occupancy,
-                Rate = newVillaDto.Rate,
-                Sqft = newVillaDto.Sqft,
-            };
+            VillaModelClass newVilla = _mapper.Map<VillaModelClass>(newVillaDto);
 
             _context.Update(newVilla);
             _context.SaveChanges();
