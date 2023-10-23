@@ -5,6 +5,7 @@ using Magic_Villa_WebAPI.DB_Context;
 using Magic_Villa_WebAPI.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
+using Magic_Villa_WebAPI.Repository.IRepository;
 
 namespace Magic_Villa_WebAPI.Controllers
 {
@@ -15,21 +16,21 @@ namespace Magic_Villa_WebAPI.Controllers
     public class VillaAPIController : ControllerBase
     {
         private readonly ILogger<VillaAPIController> _logger;
-        private readonly VillaDBContext _context;
         private readonly IMapper _mapper;
+        private readonly IVillaRepository _villaRepository;
 
-        public VillaAPIController(ILogger<VillaAPIController> logger, VillaDBContext context, IMapper mapper)
+        public VillaAPIController(ILogger<VillaAPIController> logger, VillaDBContext context, IMapper mapper,IVillaRepository villaRepository)
         {
             _logger = logger;
-            _context = context;
             _mapper = mapper;
+            _villaRepository = villaRepository;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<VillaDto>>> GetAllVillas()
         {
             _logger.LogInformation("Getting All Villas....");
-            IEnumerable<VillaModelClass> villas = await _context.Villas.ToListAsync();
+            IEnumerable<VillaModelClass> villas = await  _villaRepository.GetAll();
             return Ok(_mapper.Map<VillaDto>(villas));
         }
 
@@ -48,7 +49,7 @@ namespace Magic_Villa_WebAPI.Controllers
             }
             else
             {
-                VillaModelClass villa = await _context.Villas.FirstOrDefaultAsync(x => x.Id == id);
+                VillaModelClass villa = await _villaRepository.GetById(x => x.Id == id);
                 if (villa == null)
                 {
                     return NotFound("Data not Found");
@@ -70,7 +71,7 @@ namespace Magic_Villa_WebAPI.Controllers
             }
 
             //Custom Validation
-            if (await _context.Villas.FirstOrDefaultAsync(x => x.Name.ToLower() == villa.Name.ToLower()) != null)
+            if(await _villaRepository.GetAll(x => x.Name.ToLower() == villa.Name.ToLower()) != null)
             {
                 ModelState.AddModelError("", "Villa Name should be unique");
                 return BadRequest(ModelState);
@@ -81,41 +82,28 @@ namespace Magic_Villa_WebAPI.Controllers
             }
 
             VillaModelClass newVilla =  _mapper.Map<VillaModelClass>(villa);
-
-            //VillaModelClass newVilla = new VillaModelClass()
-            //{
-            //    Name = villa.Name,
-            //    Details = villa.Details,
-            //    Amenity = villa.Amenity,
-            //    ImageURL = villa.ImageURL,
-            //    Occupancy = villa.Occupancy,
-            //    Rate = villa.Rate,
-            //    Sqft = villa.Sqft,
-            //};
-            _context.Villas.Add(newVilla);
-            _context.SaveChanges();
+            await _villaRepository.Create(newVilla);
 
             return CreatedAtRoute("GetVilla", new { id = newVilla.Id }, villa); // Name,param,whole object
         }
 
         [HttpDelete("{id:int}")]
 
-        public ActionResult<VillaDto> DeleteVillaByName(int id)
+        public async Task<ActionResult<VillaDto>> DeleteVillaByName(int id)
         {
             if (id == null)
             {
                 return BadRequest();
             }
 
-            var villa = _context.Villas.FirstOrDefault(x => x.Id == id);
+            var villa = await _villaRepository.GetById(x => x.Id == id);
 
             if (villa == null)
             {
                 return NotFound();
             }
 
-            _context.Villas.Remove(villa);
-            _context.SaveChanges();
+            _villaRepository.Remove(villa);
 
             return Ok($"{villa.Name} is deleted sucessfully");
         }
@@ -123,34 +111,23 @@ namespace Magic_Villa_WebAPI.Controllers
 
         [HttpPut("{id:int}")]
 
-        public IActionResult UpdateVilla(int id, [FromBody] VillaUpdateDto villa) //IactionResult used to return no content
+        public async Task<IActionResult> UpdateVilla(int id, [FromBody] VillaUpdateDto villa) //IactionResult used to return no content
         {
             if (id == null || id != villa.Id)
             {
                 return BadRequest();
             }
 
-            var villaFound = _context.Villas.FirstOrDefault(x => x.Id == id);
+            var villaFound = _villaRepository.GetAll(x => x.Id == id);
 
             if (villaFound == null)
             {
                 return NotFound();
             }
+
             VillaModelClass newVilla = _mapper.Map<VillaModelClass>(villa);
 
-            //VillaModelClass newVilla = new VillaModelClass()
-            //{
-            //    Name = villa.Name,
-            //    Details = villa.Details,
-            //    Amenity = villa.Amenity,
-            //    ImageURL = villa.ImageURL,
-            //    Occupancy = villa.Occupancy,
-            //    Rate = villa.Rate,
-            //    Sqft = villa.Sqft,
-            //};
-
-            _context.Villas.Update(newVilla);
-            _context.SaveChanges();
+            await _villaRepository.Update(newVilla);
 
             return NoContent();
         }
@@ -158,16 +135,14 @@ namespace Magic_Villa_WebAPI.Controllers
 
         [HttpPatch("{id:int}")]
 
-        public IActionResult PartialUpdateVilla(int id , JsonPatchDocument<VillaUpdateDto> patchVilla)
+        public async  Task<IActionResult> PartialUpdateVilla(int id , JsonPatchDocument<VillaUpdateDto> patchVilla)
         {
             if (id == null || patchVilla == null)
             {
                 return BadRequest();
             }
 
-            //no tracking for the patch operation
-
-            var villaFound = _context.Villas.AsNoTracking().FirstOrDefault(x => x.Id == id);
+            var villaFound = _villaRepository.GetById(x => x.Id == id , true);
 
             if(villaFound  == null)
             {
@@ -180,13 +155,13 @@ namespace Magic_Villa_WebAPI.Controllers
 
             VillaModelClass newVilla = _mapper.Map<VillaModelClass>(newVillaDto);
 
-            _context.Update(newVilla);
-            _context.SaveChanges();
+            _villaRepository.Update(newVilla);
 
             if(!ModelState.IsValid)
             {
                 return BadRequest(ModelState);  
             }
+
             return NoContent();
         }
 

@@ -1,18 +1,15 @@
 using Magic_Villa_WebAPI.DB_Context;
 using Magic_Villa_WebAPI.Mapping.Config;
+using Magic_Villa_WebAPI.Repository;
+using Magic_Villa_WebAPI.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-/*Log.Logger = new LoggerConfiguration().MinimumLevel.Information()
-    .WriteTo.File("log/villalogs.txt",rollingInterval:RollingInterval.Day)
-    .CreateLogger();
-builder.Host.UseSerilog(); */
-
-
 // Add services to the container.
+builder.Services.AddSingleton<IVillaRepository, VillaRepository>();
 builder.Services.AddAutoMapper(typeof(ModelMapConfig));
 builder.Services.AddDbContext<VillaDBContext>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSqlConnection")));
 builder.Services.AddControllers(option =>
