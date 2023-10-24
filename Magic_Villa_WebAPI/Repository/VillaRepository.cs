@@ -8,61 +8,19 @@ using System.Reflection.Metadata.Ecma335;
 
 namespace Magic_Villa_WebAPI.Repository
 {
-    public class VillaRepository : IVillaRepository
+    public class VillaRepository : Repository<VillaModelClass>, IVillaRepository
     {
         private readonly VillaDBContext _context;
 
-        public VillaRepository(VillaDBContext dBContext) {
+        public VillaRepository(VillaDBContext dBContext): base(dBContext) {
             _context = dBContext;
         }    
-        public async Task Create(VillaModelClass villa)
+        public async Task<VillaModelClass> Update(VillaModelClass villa)
         {
-           await _context.AddAsync(villa);
-           await Save();
-        }
-
-        public async Task<List<VillaModelClass>> GetAll(Expression<Func<VillaModelClass,bool>> filter = null)
-        {
-            IQueryable<VillaModelClass> query = _context.Villas;
-
-            if (filter != null)
-            {
-                query = query.Where(filter);
-            }
-            return await query.ToListAsync();  
-        }
-
-        public async Task<VillaModelClass> GetById(Expression<Func<VillaModelClass,bool>> filter = null, bool tracked = true)
-        {
-            IQueryable<VillaModelClass> query = _context.Villas;
-
-            if(!tracked)
-            {
-                query = query.AsNoTracking();
-            }
-
-            if (filter != null)
-            {
-                query = query.Where(filter);
-            }
-            return await query.FirstOrDefaultAsync(); //if no result in filter then return default value
-        }
-
-        public async Task Remove(VillaModelClass villa)
-        {
-            _context.Remove(villa);
-            await Save();
-        }
-
-        public async Task Save()
-        {
+            villa.UpdatedDate = DateTime.Now;
+            _context.Villas.Update(villa);
             await _context.SaveChangesAsync();
-        }
-
-        public async Task Update(VillaModelClass villa)
-        {
-            _context.Update(villa);
-            await Save();
+            return villa;
         }
     }
 }

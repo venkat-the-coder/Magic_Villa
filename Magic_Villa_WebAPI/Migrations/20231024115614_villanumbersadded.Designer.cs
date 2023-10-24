@@ -4,6 +4,7 @@ using Magic_Villa_WebAPI.DB_Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Magic_Villa_WebAPI.Migrations
 {
     [DbContext(typeof(VillaDBContext))]
-    partial class VillaDBContextModelSnapshot : ModelSnapshot
+    [Migration("20231024115614_villanumbersadded")]
+    partial class villanumbersadded
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

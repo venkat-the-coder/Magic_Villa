@@ -13,6 +13,7 @@ namespace Magic_Villa_WebAPI.DB_Context
             
         }
         public DbSet<VillaModelClass> Villas { get; set; }
+        public DbSet<VillaNumberModel> VillasNumber { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

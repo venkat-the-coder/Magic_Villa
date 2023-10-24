@@ -9,7 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 // Add services to the container.
-builder.Services.AddSingleton<IVillaRepository, VillaRepository>();
+builder.Services.AddScoped<IVillaRepository, VillaRepository>();
+builder.Services.AddScoped<IVillaNumberRepository, VillaNumberRepository>();
 builder.Services.AddAutoMapper(typeof(ModelMapConfig));
 builder.Services.AddDbContext<VillaDBContext>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSqlConnection")));
 builder.Services.AddControllers(option =>
